@@ -30,7 +30,7 @@ async def cmd_start(message: Message, state: FSMContext):
     else:
         await message.answer(
             "👋 <b>Tanishuv Botiga Xush Kelibsiz!</b>\n\n"
-            "🔥 Bu yerda yangi tanishliklar va do'stlar topa olasiz.\n\n"
+            "🔥 Bu yerda yangi tanishlar va do'stlar topa olasiz.\n\n"
             "Boshlash uchun /register ni bosing.",
             parse_mode="HTML"
         )
