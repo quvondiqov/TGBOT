@@ -1,7 +1,7 @@
 import aiosqlite
-import asyncio
 
 DB_PATH = "tgbot.db"
+ALLOWED_USER_FIELDS = {"gender", "name", "age", "bio", "photo_id", "city", "is_active"}
 
 
 async def create_tables():
@@ -71,13 +71,14 @@ async def get_user(user_id: int) -> dict | None:
 
 
 async def update_user_field(user_id: int, field: str, value):
+    if field not in ALLOWED_USER_FIELDS:
+        raise ValueError(f"Ruxsat berilmagan maydon: {field}")
     async with aiosqlite.connect(DB_PATH) as db:
         await db.execute(f"UPDATE users SET {field} = ? WHERE user_id = ?", (value, user_id))
         await db.commit()
 
 
 async def get_next_profile(viewer_id: int, target_gender: str) -> dict | None:
-    """Ko'ruvchi foydalanuvchi uchun navbatdagi ko'rilmagan profilni olish"""
     async with aiosqlite.connect(DB_PATH) as db:
         db.row_factory = aiosqlite.Row
         async with db.execute("""
@@ -105,26 +106,20 @@ async def mark_viewed(viewer_id: int, target_id: int):
 
 
 async def clear_viewed(viewer_id: int):
-    """Remove all viewed entries for a viewer to restart recommendation cycle."""
     async with aiosqlite.connect(DB_PATH) as db:
-        await db.execute(
-            "DELETE FROM viewed WHERE viewer_id = ?",
-            (viewer_id,)
-        )
+        await db.execute("DELETE FROM viewed WHERE viewer_id = ?", (viewer_id,))
         await db.commit()
 
 
 # ──────────────────── LIKES ────────────────────
 
 async def add_like(from_user: int, to_user: int) -> bool:
-    """Like qo'shish. Agar o'zaro like bo'lsa True qaytaradi."""
     async with aiosqlite.connect(DB_PATH) as db:
         await db.execute(
             "INSERT OR IGNORE INTO likes (from_user, to_user) VALUES (?, ?)",
             (from_user, to_user)
         )
         await db.commit()
-        # O'zaro like tekshirish
         async with db.execute(
             "SELECT 1 FROM likes WHERE from_user = ? AND to_user = ?",
             (to_user, from_user)
@@ -157,19 +152,14 @@ async def get_purchase(buyer_id: int, target_id: int) -> dict | None:
 async def get_purchase_by_pay_id(pay_id: str) -> dict | None:
     async with aiosqlite.connect(DB_PATH) as db:
         db.row_factory = aiosqlite.Row
-        async with db.execute("""
-            SELECT * FROM purchases WHERE pay_id = ?
-        """, (pay_id,)) as cursor:
+        async with db.execute("SELECT * FROM purchases WHERE pay_id = ?", (pay_id,)) as cursor:
             row = await cursor.fetchone()
             return dict(row) if row else None
 
 
 async def update_purchase_status(pay_id: str, status: str):
     async with aiosqlite.connect(DB_PATH) as db:
-        await db.execute(
-            "UPDATE purchases SET status = ? WHERE pay_id = ?",
-            (status, pay_id)
-        )
+        await db.execute("UPDATE purchases SET status = ? WHERE pay_id = ?", (status, pay_id))
         await db.commit()
 
 
@@ -183,11 +173,8 @@ async def is_profile_purchased(buyer_id: int, target_id: int) -> bool:
 
 
 async def get_pending_purchases() -> list[dict]:
-    """Hali tekshirilmagan to'lovlar ro'yxati"""
     async with aiosqlite.connect(DB_PATH) as db:
         db.row_factory = aiosqlite.Row
-        async with db.execute(
-            "SELECT * FROM purchases WHERE status = 'pending'"
-        ) as cursor:
+        async with db.execute("SELECT * FROM purchases WHERE status = 'pending'") as cursor:
             rows = await cursor.fetchall()
             return [dict(r) for r in rows]
