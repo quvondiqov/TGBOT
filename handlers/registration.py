@@ -4,7 +4,7 @@ from aiogram.types import Message
 from aiogram.fsm.context import FSMContext
 
 from database.db import add_user
-from keyboards.kb import gender_kb, main_menu_kb
+from keyboards.kb import gender_kb, skip_photo_kb, main_menu_kb
 from states.states import Registration
 
 logger = logging.getLogger(__name__)
@@ -22,7 +22,10 @@ async def process_gender(message: Message, state: FSMContext):
 
     await state.update_data(gender=gender)
     await state.set_state(Registration.name)
-    await message.answer("✨ Ajoyib! Endi <b>ismingizni</b> kiriting:", parse_mode="HTML")
+    await message.answer(
+        "✨ Ajoyib! Endi <b>ismingizni</b> kiriting:",
+        parse_mode="HTML"
+    )
 
 
 @router.message(Registration.name)
@@ -34,7 +37,11 @@ async def process_name(message: Message, state: FSMContext):
 
     await state.update_data(name=name)
     await state.set_state(Registration.age)
-    await message.answer(f"🎉 Salom, <b>{name}</b>!\n\nYoshingizni kiriting (14-60):", parse_mode="HTML")
+    await message.answer(
+        f"🎉 Salom, <b>{name}</b>!\n\n"
+        "Yoshingizni kiriting (14-60):",
+        parse_mode="HTML"
+    )
 
 
 @router.message(Registration.age)
@@ -49,7 +56,11 @@ async def process_age(message: Message, state: FSMContext):
 
     await state.update_data(age=age)
     await state.set_state(Registration.bio)
-    await message.answer("📝 O'zingiz haqingizda qisqacha yozing\n<i>(maksimal 300 ta belgi)</i>:", parse_mode="HTML")
+    await message.answer(
+        "📝 O'zingiz haqingizda qisqacha yozing\n"
+        "<i>(maksimal 300 ta belgi)</i>:",
+        parse_mode="HTML"
+    )
 
 
 @router.message(Registration.bio)
@@ -61,7 +72,12 @@ async def process_bio(message: Message, state: FSMContext):
 
     await state.update_data(bio=bio)
     await state.set_state(Registration.photo)
-    await message.answer("🤳 Rasmingizni yuboring:\n<i>(Ro'yxatdan o'tish uchun rasm yuborish majburiy!)</i>", parse_mode="HTML")
+    await message.answer(
+        "🤳 Rasmingizni yuboring:\n"
+        "<i>(Ro'yxatdan o'tish uchun rasm yuborish majburiy!)</i>",
+        reply_markup=None,
+        parse_mode="HTML"
+    )
 
 
 @router.message(Registration.photo, F.photo)
@@ -69,7 +85,10 @@ async def process_photo(message: Message, state: FSMContext):
     photo_id = message.photo[-1].file_id
     await state.update_data(photo_id=photo_id)
     await state.set_state(Registration.city)
-    await message.answer("🏙 Shahringizni kiriting:")
+    await message.answer(
+        "🏙 Shahringizni kiriting:",
+        reply_markup=None
+    )
 
 
 @router.message(Registration.photo)
@@ -84,12 +103,10 @@ async def process_city(message: Message, state: FSMContext):
         await message.answer("Shahar nomi juda uzun. Qaytadan kiriting:")
         return
 
-    # Shaharni saqlaymiz va BARCHA ma'lumotlarni get_data() orqali olamiz
-    await state.update_data(city=city)
-    data = await state.get_data()
+    data = await state.update_data(city=city)
     await state.clear()
 
-    # Bazaga saqlash
+    # Foydalanuvchini bazaga saqlash
     await add_user(
         user_id=message.from_user.id,
         gender=data["gender"],
