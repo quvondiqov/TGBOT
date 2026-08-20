@@ -7,9 +7,7 @@ logger = logging.getLogger(__name__)
 
 
 def get_taps_payment_link(pay_id: str = "", amount_uzs: int = PROFILE_PRICE_UZS) -> str:
-    """Taps.uz to'lov havolasini shakllantirish.
-    To'lov identifikatori (pay_id) va summa parametr sifatida qo'shiladi.
-    """
+    """Taps.uz to'lov havolasini shakllantirish."""
     if not pay_id:
         return TAPS_URL
 
@@ -23,23 +21,14 @@ def get_taps_payment_link(pay_id: str = "", amount_uzs: int = PROFILE_PRICE_UZS)
 
 
 async def auto_verify_taps_payment(pay_id: str, buyer_id: int) -> bool:
-    """Taps.uz sayti orqali to'lov bajarilganini tekshirish algoritmi.
-    
-    1. Taps API / Tekshiruv so'rovi (JSON / GET / POST) yuboradi.
-    2. Javobdagi 'status' / 'paid' / 'success' qiymatlarini tekshiradi.
-    3. Agar Taps platformasi sahifa ko'rinishida bo'lsa, HTML tarkibidagi
-       to'lov holatini tahlil qiladi.
-    4. Muvaffaqiyatli tekshiruvdan so'ng True qaytaradi.
-    """
+    """Taps.uz sayti orqali to'lov bajarilganini tekshirish algoritmi."""
     logger.info(f"🔍 [Taps.uz] To'lov tekshiruvi boshlandi: pay_id={pay_id}, buyer_id={buyer_id}")
     
-    # 1. API check URL
     api_check_url = f"{TAPS_URL.rstrip('/')}/api/check"
     params = {"pay_id": pay_id, "account": buyer_id, "comment": pay_id}
 
     try:
         async with aiohttp.ClientSession() as session:
-            # GET so'rovi orqali tekshirish
             async with session.get(api_check_url, params=params, timeout=8) as resp:
                 if resp.status == 200:
                     try:
@@ -52,7 +41,6 @@ async def auto_verify_taps_payment(pay_id: str, buyer_id: int) -> bool:
                         if any(word in html_text.lower() for word in ["paid", "success", "muvaffaqiyatli", "to'landi"]):
                             return True
 
-            # 2. Asosiy Taps sahifasini tekshirish
             async with session.get(TAPS_URL, params={"pay_id": pay_id}, timeout=8) as resp2:
                 if resp2.status == 200:
                     text = await resp2.text()
@@ -62,7 +50,5 @@ async def auto_verify_taps_payment(pay_id: str, buyer_id: int) -> bool:
     except Exception as e:
         logger.warning(f"⚠️ Taps verification network check note: {e}")
 
-    # Foydalanuvchi to'lovni tasdiqlash tugmasini bosganda to'lov bajarilgan deb qabul qilinadi
-    logger.info(f"✅ To'lov muvaffaqiyatli tasdiqlandi: pay_id={pay_id}")
-    return True
-
+    # Chek rasmiga tayanilgani sababli, avto-tekshiruv API javob bermasa False qaytaradi (xavfsiz rejim)
+    return False
