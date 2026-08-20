@@ -84,9 +84,12 @@ async def process_city(message: Message, state: FSMContext):
         await message.answer("Shahar nomi juda uzun. Qaytadan kiriting:")
         return
 
+    # Shaharni saqlaymiz va BARCHA ma'lumotlarni get_data() orqali olamiz
+    await state.update_data(city=city)
     data = await state.get_data()
     await state.clear()
 
+    # Bazaga saqlash
     await add_user(
         user_id=message.from_user.id,
         gender=data["gender"],
